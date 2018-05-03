@@ -8,6 +8,7 @@ COIN_CLI='qbic-cli'
 COIN_PATH='/usr/local/bin/'
 COIN_TGZ='https://github.com/qbic-platform/qbic/releases/download/v1.1.1/qbicd-linux64-1.1.1.tar.gz'
 COIN_ZIP=$(echo $COIN_TGZ | awk -F'/' '{print $NF}')
+SENTINEL_REPO='https://github.com/qbic-platform/sentinel.git'
 COIN_NAME='Qbic'
 COIN_PORT=17195
 RPC_PORT=17196
@@ -31,6 +32,18 @@ function download_node() {
   cd ~ >/dev/null 2>&1
   rm -rf $TMP_FOLDER >/dev/null 2>&1
   clear
+}
+
+function install_sentinel() {
+  echo -e "${GREEN}Install sentinel.${NC}"
+  apt-get -y install python-virtualenv virtualenv >/dev/null 2>&1
+  git clone $SENTINEL_REPO /root/sentinel_$COIN_NAME >/dev/null 2>&1
+  cd /root/sentinel_$COIN_NAME
+  virtualenv ./venv >/dev/null 2>&1
+  ./venv/bin/pip install -r requirements.txt >/dev/null 2>&1
+  echo  "* * * * * cd /root/sentinel_$COIN_NAME && ./venv/bin/python bin/sentinel.py >> $CONFIGFOLDER/sentinel.log 2>&1" > $CONFIGFOLDER/$COIN_NAME.cron
+  crontab $CONFIGFOLDER/$COIN_NAME.cron
+  rm $CONFIGFOLDER/$COIN_NAME.cron >/dev/null 2>&1
 }
 
 
@@ -241,7 +254,7 @@ function important_information() {
  echo -e "Please check ${RED}$COIN_NAME${NC} daemon is running with the following command: ${RED}systemctl status $COIN_NAME.service${NC}"
  echo -e "Use ${RED}$COIN_CLI masternode status${NC} to check your MN."
  if [[ -n $SENTINEL_REPO  ]]; then
-  echo -e "${RED}Sentinel${NC} is installed in ${RED}$CONFIGFOLDER/sentinel${NC}"
+  echo -e "${RED}Sentinel${NC} is installed in ${RED}/root/sentinel_$COIN_NAME${NC}"
   echo -e "Sentinel logs is: ${RED}$CONFIGFOLDER/sentinel.log${NC}"
  fi
  echo -e "================================================================================================================================"
@@ -253,6 +266,7 @@ function setup_node() {
   create_key
   update_config
   enable_firewall
+  install_sentinel
   important_information
   configure_systemd
 }
